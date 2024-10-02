@@ -1,6 +1,6 @@
 ---
 title: "NFLDATA"
-output: pdf_document
+output: md_document
 date: "2024-09-27"
 ---
 
@@ -13,6 +13,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```{r}
 library(nflfastR)
 library(dplyr)
+library(readr)
+play_by_play_2023 <- read_csv("play_by_play_2023.csv")
 ```
 ```{r}
 data1 <- play_by_play_2023
