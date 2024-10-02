@@ -1,0 +1,92 @@
+---
+title: "NFLDATA"
+output: pdf_document
+date: "2024-09-27"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+library(nflfastR)
+library(dplyr)
+```
+```{r}
+data1 <- play_by_play_2023
+data2 <- data1 %>% mutate(opp_FG_TD_prob=opp_td_prob+opp_fg_prob)
+```
+```{r}
+punts <- data2 %>% filter(play_type == "punt")
+punts
+```
+
+```{r}
+names(punts)
+```
+#Variables to Use
+## Punt Distance
+```{r}
+dens <- density(punts$kick_distance)
+plot(dens$x,dens$y,main="Density of Punt Distance",xlab="Punt Distance (YDS)")
+abline(v=mean(punts$kick_distance),lwd=4,col="red")
+abline(v=quantile(punts$kick_distance)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$kick_distance)[4],lwd=4,col="yellow")
+plot(punts$kick_distance)
+summary(punts$kick_distance)
+```
+## Score Difference
+```{r}
+dens <- density(punts$score_differential)
+plot(dens$x,dens$y,main="Density of Score Differential",xlab="Punting Team Score - Receiving Team Score")
+abline(v=mean(punts$score_differential),lwd=4,col="red")
+abline(v=quantile(punts$score_differential)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$score_differential)[4],lwd=4,col="yellow")
+plot(punts$score_differential)
+summary(punts$score_differential)
+```
+# Receiving Team TD Chance
+```{r}
+dens <- density(punts$opp_td_prob)
+plot(dens$x,dens$y,main="Density of Receiving Team TD Probability",xlab="Chance of Receiving Team TD Next")
+abline(v=mean(punts$opp_td_prob),lwd=4,col="red")
+abline(v=quantile(punts$opp_td_prob)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$opp_td_prob)[4],lwd=4,col="yellow")
+plot(punts$opp_td_prob)
+summary(punts$opp_td_prob)
+```
+# Receiving Team FG Probability
+```{r}
+dens <- density(punts$opp_fg_prob)
+plot(dens$x,dens$y,main="Density of Receiving Team FG Probabilty",xlab="Chance of Receiving Team FG Next")
+abline(v=mean(punts$opp_fg_prob),lwd=4,col="red")
+abline(v=quantile(punts$opp_fg_prob)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$opp_fg_prob)[4],lwd=4,col="yellow")
+plot(punts$opp_fg_prob)
+summary(punts$opp_fg_prob)
+```
+# Combined FG and TD receiving team chance
+```{r}
+dens <- density(punts$opp_FG_TD_prob)
+plot(dens$x,dens$y,main="Density of Receiving Team Score",xlab="Chance of Receiving Team Score Next")
+abline(v=mean(punts$opp_FG_TD_prob),lwd=4,col="red")
+abline(v=quantile(punts$opp_FG_TD_prob)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$opp_FG_TD_prob)[4],lwd=4,col="yellow")
+plot(punts$opp_FG_TD_prob)
+summary(punts$opp_FG_TD_prob)
+```
+# Punting Team TD Probability
+```{r}
+dens <- density(punts$td_prob)
+plot(dens$x,dens$y,main="Density of Punting Team TD Probability",xlab="Chance of Punting Team TD Next")
+abline(v=mean(punts$td_prob),lwd=4,col="red")
+abline(v=quantile(punts$td_prob)[2],lwd=4,col="yellow")
+abline(v=quantile(punts$td_prob)[4],lwd=4,col="yellow")
+plot(punts$td_prob)
+summary(punts$td_prob)
+```
+
+
+
