@@ -1,0 +1,43 @@
+---
+title: "40to50"
+output: md_document
+date: "2024-10-07"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+```
+
+## R Markdown
+
+```{r}
+library(nflfastR)
+library(dplyr)
+library(readr)
+data1 <- read_csv("play_by_play_2023.csv")
+```
+```{r}
+fours <- data1 %>% filter(down==4&(play_type=="punt"|play_type=="run"|play_type=="pass"))
+goforit <-  data1 %>% filter(down==4&(play_type=="run"|play_type=="pass"))
+posplays <- goforit %>% filter(yards_gained>=0)
+plot(goforit$ydstogo,goforit$yards_gained)
+cor(goforit$ydstogo,goforit$yards_gained)
+plot(posplays$ydstogo,posplays$yards_gained)
+cor(posplays$ydstogo,posplays$yards_gained)
+unique(data1$play_type)
+```
+
+```{r}
+goforit %>% filter(ydstogo>=1&ydstogo<=10)
+conversion <- c()
+for (i in 1:10){
+  tbl <- goforit %>% filter(ydstogo==i) 
+  conversion[i] <- tbl$fourth_down_converted %>% mean()
+}
+x <- 1:10
+plot(x,conversion)
+cor(x,conversion)
+goforit %>% filter(ydstogo==5)
+```
+
