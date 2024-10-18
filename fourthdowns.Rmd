@@ -7,6 +7,7 @@ date: "2024-10-07"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(dplyr)
+library(ggplot2)
 ```
 
 ## R Markdown
@@ -27,17 +28,45 @@ plot(posplays$ydstogo,posplays$yards_gained)
 cor(posplays$ydstogo,posplays$yards_gained)
 unique(data1$play_type)
 ```
+## OVERALL
 
 ```{r}
 goforit %>% filter(ydstogo>=1&ydstogo<=10)
-conversion <- c()
-for (i in 1:10){
-  tbl <- goforit %>% filter(ydstogo==i) 
+yardstogo_plot <- function(df){
+  conversion <- c()
+  df$ydstogo <- ifelse(df$ydstogo>10,11,df$ydstogo)
+for (i in 1:11){
+  tbl <- df %>% filter(ydstogo==i) 
   conversion[i] <- tbl$fourth_down_converted %>% mean()
 }
-x <- 1:10
-plot(x,conversion)
-cor(x,conversion)
+Yardstogo <- 1:11
+ggdf <- data.frame(Yardstogo,conversion)
+ggplot(ggdf,aes(x=Yardstogo,y=conversion)) + geom_point(size=5,shape=22,fill="blue") + theme(plot.title=element_text("Conversion Rate based on Yards to Go"),panel.background=element_rect(fill="green"),panel.grid.major.x=element_line(colour="yellow"),panel.grid.minor.x=element_line(colour="yellow"))}
 goforit %>% filter(ydstogo==5)
+yardstogo_plot(goforit)
 ```
+## ONLY OPP 40-50
+```{r}
+forty_to_fifty <- goforit %>% filter(40<=yardline_100) %>% filter(yardline_100<50)
+forty_to_fifty
+yardstogo_plot(forty_to_fifty)
+```
+```{r}
+thirty_to_forty <- goforit %>% filter(30<=yardline_100) %>% filter(yardline_100<40)
+yardstogo_plot(thirty_to_forty)
+```
+```{r}
+twenty_to_thirty <- goforit %>% filter(20<=yardline_100) %>% filter(yardline_100<30)
+yardstogo_plot(twenty_to_thirty)
+```
+```{r}
+ten_to_twenty <- goforit %>% filter(10<=yardline_100) %>% filter(yardline_100<20)
+yardstogo_plot(ten_to_twenty)
+```
+
+```{r}
+goal_line <- goforit %>% filter(1<=yardline_100) %>% filter(yardline_100<10)
+yardstogo_plot(goal_line)
+```
+
 
