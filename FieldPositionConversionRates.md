@@ -22,6 +22,11 @@
 
 ![](FieldPositionConversionRates_files/figure-markdown_strict/unnamed-chunk-2-1.png)
 
+    dev.off()
+
+    ## null device 
+    ##           1
+
     field_position_groups <- list(
       "1-10" = goforit %>% filter(yardline_100 >= 1 & yardline_100 <= 10),
       "11-20" = goforit %>% filter(yardline_100 >= 11 & yardline_100 <= 20),
