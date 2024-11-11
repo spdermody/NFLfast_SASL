@@ -1,0 +1,207 @@
+---
+title: "Untitled"
+output: html_document
+date: "2024-11-05"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(nflfastR)
+library(dplyr)
+library(readr)
+
+```
+
+
+--- Comparing Years---
+
+```{r}
+dataEarlyYears <- load_pbp(2003:2013)
+dataLaterYears <- load_pbp(2013:2023)
+
+goforitEarly <-  dataEarlyYears %>% filter(down==4&(play_type=="run"|play_type=="pass"))
+goforitLater <-  dataLaterYears %>% filter(down==4&(play_type=="run"|play_type=="pass"))
+
+```
+
+```{r}
+
+plot(goforitEarly$ydstogo,goforitEarly$yards_gained)
+cor(goforitEarly$ydstogo,goforitEarly$yards_gained)
+
+unique(dataEarlyYears$play_type)
+
+plot(goforitLater$ydstogo,goforitLater$yards_gained)
+cor(goforitLater$ydstogo,goforitLater$yards_gained)
+
+unique(dataLaterYears$play_type)
+
+```
+
+---Overall---
+
+```{r}
+
+goforitEarly %>% filter(ydstogo>=1&ydstogo<=10)
+yardstogo_plot <- function(df){
+  conversion <- c()
+  df$ydstogo <- ifelse(df$ydstogo>10,11,df$ydstogo)
+for (i in 1:11){
+  tbl <- df %>% filter(ydstogo==i) 
+  conversion[i] <- tbl$fourth_down_converted %>% mean()
+}
+Yardstogo <- 1:11
+ggdfEarly <- data.frame(Yardstogo,conversion)
+ggplot(ggdfEarly,aes(x=Yardstogo,y=conversion)) + geom_point(size=5,shape=22,fill="blue") + theme(plot.title=element_text("Conversion Rate based on Yards to Go"),panel.background=element_rect(fill="lightgrey"),panel.grid.major.x=element_line(colour="yellow"),panel.grid.minor.x=element_line(colour="yellow"))}
+goforitEarly %>% filter(ydstogo==5)
+yardstogo_plot(goforitEarly)
+
+
+
+goforitLater %>% filter(ydstogo>=1&ydstogo<=10)
+yardstogo_plot <- function(df){
+  conversion <- c()
+  df$ydstogo <- ifelse(df$ydstogo>10,11,df$ydstogo)
+for (i in 1:11){
+  tbl <- df %>% filter(ydstogo==i) 
+  conversion[i] <- tbl$fourth_down_converted %>% mean()
+}
+Yardstogo <- 1:11
+ggdfLater <- data.frame(Yardstogo,conversion)
+ggplot(ggdfLater,aes(x=Yardstogo,y=conversion)) + geom_point(size=5,shape=22,fill="blue") + theme(plot.title=element_text("Conversion Rate based on Yards to Go"),panel.background=element_rect(fill="lightgrey"),panel.grid.major.x=element_line(colour="yellow"),panel.grid.minor.x=element_line(colour="yellow"))}
+goforitLater %>% filter(ydstogo==5)
+yardstogo_plot(goforitLater)
+
+```
+
+```{r}
+
+forty_to_fiftyEarly <- goforitEarly %>% filter(40<=yardline_100) %>% filter(yardline_100<50)
+forty_to_fiftyEarly
+yardstogo_plot(forty_to_fiftyEarly)
+
+thirty_to_fortyEarly <- goforitEarly %>% filter(30<=yardline_100) %>% filter(yardline_100<40)
+yardstogo_plot(thirty_to_fortyEarly)
+
+
+twenty_to_thirtyEarly <- goforitEarly %>% filter(20<=yardline_100) %>% filter(yardline_100<30)
+yardstogo_plot(twenty_to_thirtyEarly)
+
+
+ten_to_twentyEarly <- goforitEarly %>% filter(10<=yardline_100) %>% filter(yardline_100<20)
+yardstogo_plot(ten_to_twentyEarly)
+
+
+
+forty_to_fiftyLater <- goforitLater %>% filter(40<=yardline_100) %>% filter(yardline_100<50)
+yardstogo_plot(forty_to_fiftyLater)
+
+thirty_to_fortyLater <- goforitLater %>% filter(30<=yardline_100) %>% filter(yardline_100<40)
+yardstogo_plot(thirty_to_fortyLater)
+
+
+twenty_to_thirtyLater <- goforitLater %>% filter(20<=yardline_100) %>% filter(yardline_100<30)
+yardstogo_plot(twenty_to_thirtyLater)
+
+
+ten_to_twentyLater <- goforitLater %>% filter(10<=yardline_100) %>% filter(yardline_100<20)
+yardstogo_plot(ten_to_twentyLater)
+
+```
+
+--------- Just some things I'm noticing -----------
+
+Differences in observation numbers
+
+10-20 Yard Line : 
+    2003-2013 -> 562
+    2013-2023 -> 624
+    
+20-30 Yard Line :
+    2003-2013 -> 707
+    2013-2023 -> 730
+    
+30-40 Yard Line :
+    2003-2013 -> 1315
+    2013-2023 -> 1297
+    
+40-50 Yard Line :
+    2003-2013 -> 832
+    2013-2023 -> 1160
+    
+* Focus on the 40-50 yard line? There seems to be the biggest 
+differences between years there *
+
+First, is there a difference in the number of times they go for it - Looking
+at difference in average number of times they go for it in a week
+
+```{r}
+
+
+weekGoForItEarly = NULL
+
+for (i in 1:21) {
+  weekGoForItEarly[i] <- nrow(goforitEarly[goforitEarly$week == i, ] %>% filter(40<=yardline_100) %>% filter(yardline_100<50))
+}
+
+weekGoForItLater = NULL
+
+for (i in 1:21) {
+  weekGoForItLater[i] <- nrow(goforitLater[goforitLater$week == i, ] %>% filter(40<=yardline_100) %>% filter(yardline_100<50))
+}
+
+t.test(weekGoForItLater, weekGoForItEarly, var.equal=TRUE)
+
+```
+
+
+
+So there is a statistical difference in the number of attempts, but is there
+a difference in the success rate of these attempts?
+
+```{r}
+
+succEarly <- goforitEarly[goforitEarly$ydstogo <= goforitEarly$yards_gained,]
+succLater <- goforitLater[goforitLater$ydstogo <= goforitLater$yards_gained,]
+
+overallSuccEarly <- nrow(succEarly) / nrow(goforitEarly)
+overallSuccLater <- nrow(succLater) / nrow(goforitLater)
+
+succWeekEarly = NULL
+
+for (i in 1:21) {
+  succWeekEarly[i] <- nrow(succEarly[succEarly$week == i,]) / nrow(goforitEarly[goforitEarly$week == i, ])
+}
+
+succWeekLater = NULL
+
+for (i in 1:21) {
+  succWeekLater[i] <- nrow(succLater[succLater$week == i,]) / 
+nrow(goforitLater[goforitLater$week == i, ])
+}
+
+
+t.test(succWeekLater, succWeekEarly, var.equal = TRUE)
+
+```
+
+With alpha = 0.05, this also is statistically significant. Now, is there a big
+difference in the timing of when going for a 4th down?
+
+```{r}
+
+ggplot(data=goforitEarly,
+       mapping = aes(x=quarter_seconds_remaining)) +
+  geom_histogram(binwidth = 18)+
+  labs(title = "4th Down Attempts by Time Left in the Quarter : 2003-2013")
+
+ggplot(data=goforitLater,
+       mapping = aes(x=quarter_seconds_remaining)) +
+  geom_histogram(binwidth = 18) +
+  labs(title = "4th Down Attempts by Time Left in the Quarter : 2013-2023")
+
+```
+
