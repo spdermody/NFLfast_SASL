@@ -1,0 +1,72 @@
+---
+title: "Team Success Rates on 4th Downs"
+output: html_document
+date: "2024-11-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+library(ggplot2)
+library(nflfastR)
+library(dplyr)
+library(readr)
+```
+
+
+
+```{r}
+data <- load_pbp(2013:2023)
+goforit <-  data %>% filter(down==4&(play_type=="run"|play_type=="pass"))
+succ <- goforit[goforit$ydstogo <= goforit$yards_gained,]
+```
+
+
+
+```{r}
+
+sucARI<- nrow(succ[succ$posteam == "ARI",])/nrow(goforit[goforit$posteam == "ARI",])
+sucATL<- nrow(succ[succ$posteam == "ATL",])/nrow(goforit[goforit$posteam == "ATL",])
+sucBAL<- nrow(succ[succ$posteam == "BAL",])/nrow(goforit[goforit$posteam == "BAL",])
+sucBUF<- nrow(succ[succ$posteam == "BUF",])/nrow(goforit[goforit$posteam == "BUF",])
+sucCAR<- nrow(succ[succ$posteam == "CAR",])/nrow(goforit[goforit$posteam == "CAR",])
+sucCHI<- nrow(succ[succ$posteam == "CHI",])/nrow(goforit[goforit$posteam == "CHI",])
+sucCIN<- nrow(succ[succ$posteam == "CIN",])/nrow(goforit[goforit$posteam == "CIN",])
+sucCLE<- nrow(succ[succ$posteam == "CLE",])/nrow(goforit[goforit$posteam == "CLE",])
+sucDAL<- nrow(succ[succ$posteam == "DAL",])/nrow(goforit[goforit$posteam == "DAL",])
+sucDEN<- nrow(succ[succ$posteam == "DEN",])/nrow(goforit[goforit$posteam == "DEN",])
+sucDET<- nrow(succ[succ$posteam == "DET",])/nrow(goforit[goforit$posteam == "DET",])
+sucGB<- nrow(succ[succ$posteam == "GB",])/nrow(goforit[goforit$posteam == "GB",])
+sucHOU<- nrow(succ[succ$posteam == "HOU",])/nrow(goforit[goforit$posteam == "HOU",])
+sucIND<- nrow(succ[succ$posteam == "IND",])/nrow(goforit[goforit$posteam == "IND",])
+sucJAX<- nrow(succ[succ$posteam == "JAX",])/nrow(goforit[goforit$posteam == "JAX",])
+sucKC<- nrow(succ[succ$posteam == "KC",])/nrow(goforit[goforit$posteam == "KC",])
+sucMIA<- nrow(succ[succ$posteam == "MIA",])/nrow(goforit[goforit$posteam == "MIA",])
+sucMIN<- nrow(succ[succ$posteam == "MIN",])/nrow(goforit[goforit$posteam == "MIN",])
+sucNE<- nrow(succ[succ$posteam == "NE",])/nrow(goforit[goforit$posteam == "NE",])
+sucNO<- nrow(succ[succ$posteam == "NO",])/nrow(goforit[goforit$posteam == "NO",])
+sucNYG<- nrow(succ[succ$posteam == "NYG",])/nrow(goforit[goforit$posteam == "NYG",])
+sucNYJ<- nrow(succ[succ$posteam == "NYJ",])/nrow(goforit[goforit$posteam == "NYJ",])
+sucLV<- nrow(succ[succ$posteam == "LV",])/nrow(goforit[goforit$posteam == "LV",])
+sucPHI<- nrow(succ[succ$posteam == "PHI",])/nrow(goforit[goforit$posteam == "PHI",])
+sucPIT<- nrow(succ[succ$posteam == "PIT",])/nrow(goforit[goforit$posteam == "PIT",])
+sucLAC<- nrow(succ[succ$posteam == "LAC",])/nrow(goforit[goforit$posteam == "LAC",])
+sucSF<- nrow(succ[succ$posteam == "SF",])/nrow(goforit[goforit$posteam == "SF",])
+sucSEA<- nrow(succ[succ$posteam == "SEA",])/nrow(goforit[goforit$posteam == "SEA",])
+sucLAR<- nrow(succ[succ$posteam == "LAR",])/nrow(goforit[goforit$posteam == "LAR",])
+sucTB<- nrow(succ[succ$posteam == "TB",])/nrow(goforit[goforit$posteam == "TB",])
+sucTEN<- nrow(succ[succ$posteam == "TEN",])/nrow(goforit[goforit$posteam == "TEN",])
+sucWAS<- nrow(succ[succ$posteam == "WAS",])/nrow(goforit[goforit$posteam == "WAS",])
+
+
+teamnames <- c("ARI", "ATL", "BAL", "BUF", "CAR", "CHI", "CIN", "CLE", "DAL", "DEN", "DET", "GB", "HOU", "IND", "JAX","KC", "MIA", "MIN", "NE", "NO", "NYG", "NYJ", "LV", "PHI", "PIT", "LAC", "SF", "SEA", "LAR", "TB", "TEN", "WAS")
+
+succRate <- c(sucARI, sucATL, sucBAL, sucBUF, sucCAR, sucCHI, sucCIN, sucCLE, sucDAL, sucDEN, sucDET, sucGB, sucHOU, sucIND, sucJAX, sucKC, sucMIA, sucMIN, sucNE, sucNO, sucNYG, sucNYJ, sucLV, sucPHI, sucPIT, sucLAC, sucSF, sucSEA, sucLAR, sucTB, sucTEN, sucWAS)
+
+teamSucRate <- data.frame(teamnames, succRate)
+
+teamSucRate <- teamSucRate[with(teamSucRate, order(-succRate)), ]
+
+```
+
