@@ -4,31 +4,31 @@
 
     ## Warning: package 'nflfastR' was built under R version 4.4.2
 
-    data <- load_pbp(2024)
+    data <- load_pbp(1999:2024)
     dim(data)
 
-    ## [1] 49316   372
+    ## [1] 1230855     372
 
     head(data)
 
     ## ── nflverse play by play data ──────────────────────────────────────────────────
 
-    ## ℹ Data updated: 2025-01-27 04:23:45 EST
+    ## ℹ Data updated: 2025-02-10 04:25:35 EST
 
     ## # A tibble: 6 × 372
     ##   play_id game_id      old_game_id home_team away_team season_type  week posteam
     ##     <dbl> <chr>        <chr>       <chr>     <chr>     <chr>       <int> <chr>  
-    ## 1       1 2024_01_ARI… 2024090801  BUF       ARI       REG             1 <NA>   
-    ## 2      40 2024_01_ARI… 2024090801  BUF       ARI       REG             1 ARI    
-    ## 3      61 2024_01_ARI… 2024090801  BUF       ARI       REG             1 ARI    
-    ## 4      83 2024_01_ARI… 2024090801  BUF       ARI       REG             1 ARI    
-    ## 5     108 2024_01_ARI… 2024090801  BUF       ARI       REG             1 ARI    
-    ## 6     133 2024_01_ARI… 2024090801  BUF       ARI       REG             1 ARI    
+    ## 1      35 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
+    ## 2      60 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
+    ## 3      82 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
+    ## 4     103 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
+    ## 5     126 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
+    ## 6     150 1999_01_ARI… 1999091200  PHI       ARI       REG             1 PHI    
     ## # ℹ 364 more variables: posteam_type <chr>, defteam <chr>, side_of_field <chr>,
     ## #   yardline_100 <dbl>, game_date <chr>, quarter_seconds_remaining <dbl>,
     ## #   half_seconds_remaining <dbl>, game_seconds_remaining <dbl>,
     ## #   game_half <chr>, quarter_end <dbl>, drive <dbl>, sp <dbl>, qtr <dbl>,
-    ## #   down <dbl>, goal_to_go <int>, time <chr>, yrdln <chr>, ydstogo <dbl>,
+    ## #   down <dbl>, goal_to_go <dbl>, time <chr>, yrdln <chr>, ydstogo <dbl>,
     ## #   ydsnet <dbl>, desc <chr>, play_type <chr>, yards_gained <dbl>,
     ## #   shotgun <dbl>, no_huddle <dbl>, qb_dropback <dbl>, qb_kneel <dbl>, …
 
@@ -49,7 +49,7 @@
 ![](kickerandpunters_files/figure-markdown_strict/unnamed-chunk-3-1.png)
 
     punt41 <- punts %>% filter(yardline_100==41)
-    dens <- density(punt41$wpa)
+    dens <- density(punt41$epa)
     plot(dens$x,dens$y,xlab="Expected Points Added",ylab="Density",main="Density of EPA on Punts")
     abline(v=mean(punt41$wpa),col="red",pch=8)
 
@@ -57,42 +57,28 @@
 
     msdpunt <- function(yard_line){
       new_df <- punts %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
     msdkick <- function(yard_line){
       new_df <- kicks %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
     msdgoforit1 <- function(yard_line){
       new_df <- goforit %>% filter(ydstogo==1) %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
     msdgoforit23 <- function(yard_line){
       new_df <- goforit %>% filter(ydstogo==2|ydstogo==3) %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
     msdgoforit47 <- function(yard_line){
       new_df <- goforit %>% filter(ydstogo>=4&ydstogo<=7) %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
     msdgoforit8 <- function(yard_line){
       new_df <- goforit %>% filter(ydstogo>=8) %>% filter(yardline_100==yard_line)
-      c(mean(new_df$wpa),sd(new_df$wpa))*100
+      c(mean(new_df$epa),sd(new_df$epa))
     }
-    fourthand1 <- c()
-    nums <- 41:50
-    nums
-
-    ##  [1] 41 42 43 44 45 46 47 48 49 50
-
-    for (i in nums){
-      fourthand1[i] <- msdgoforit1(i)[1]
-      fourthand1
-    }
-    fourthand1[nums]
-
-    ##  [1]  0.2582830  3.3971613 14.1367882  4.4050670  0.7903616  4.1418087
-    ##  [7] -6.7984641  6.6379199  4.0787035  6.8245651
 
     kick_epa_mean <- c()
     punt_wpa_mean <- sapply(41:50,msdpunt)[1,]
@@ -112,39 +98,39 @@
     colnames(df) <- c("Punts","Field Goals","4th and 1","4th and 2&3","4th and 4-7","4th and 8+","SD of Punts","SD of Field Goals","SD of 4th and 1","SD of 4th and 2&3","SD of 4th and 4-7", "SD of 4th and 8+")
     df
 
-    ##         Punts Field Goals  4th and 1 4th and 2&3 4th and 4-7 4th and 8+
-    ## 41 -0.9998212    6.192856  0.2582830  3.26366774         NaN  4.4350676
-    ## 42 -0.7756468   -9.303720  3.3971613  7.38828952   2.3547859  4.3213414
-    ## 43 -0.8332629   14.289020 14.1367882  1.81157552   2.2338535 -1.1266882
-    ## 44 -2.1209253  -10.925937  4.4050670  4.75813299   9.3154785  1.2839394
-    ## 45 -1.9153882    2.339849  0.7903616  3.66409933   0.4660798        NaN
-    ## 46  0.2870717    6.008968  4.1418087  4.89111512   8.8765524 -0.0184642
-    ## 47 -1.4784980    1.687822 -6.7984641 -0.03572845  -5.8720842  2.5560230
-    ## 48 -0.7162455         NaN  6.6379199 -8.88941884  -3.1526898        NaN
-    ## 49 -0.6852396         NaN  4.0787035  2.81131621   2.5320067        NaN
-    ## 50 -0.5010317         NaN  6.8245651 -1.07315019  20.1202810 -1.2814142
+    ##          Punts Field Goals 4th and 1 4th and 2&3 4th and 4-7 4th and 8+
+    ## 41 -0.23985938  0.17408260 0.6986347  0.88200781   0.5966554 -0.1402938
+    ## 42 -0.17653722  0.02122911 0.7523695  0.60866271   0.5307666 -0.2667566
+    ## 43 -0.15336744  0.21244680 0.9541425  0.48286374   1.1232634  0.0819258
+    ## 44 -0.22259947 -0.81760918 0.3357587  0.72196094   0.4399139 -0.6958463
+    ## 45 -0.19524145 -0.66815714 0.9559150 -0.29518358   0.2161859 -0.3730436
+    ## 46 -0.16086898 -0.19385913 0.8219887  0.03392665   0.3272982  0.6861949
+    ## 47 -0.16783320 -1.00155353 0.4355331 -0.33888771  -0.1805661 -0.4410906
+    ## 48 -0.04494476 -0.64015414 0.9661478  0.13615791   0.4910326 -0.2416206
+    ## 49 -0.09438968 -0.70990129 0.7583656  0.47304753   0.4838890  0.3663387
+    ## 50 -0.06990097         NaN 1.2038782  0.04992237   1.7085926 -0.1302199
     ##    SD of Punts SD of Field Goals SD of 4th and 1 SD of 4th and 2&3
-    ## 41    3.109674          3.364126        8.486135          9.523778
-    ## 42    4.092130         17.613861        7.059397          6.645343
-    ## 43    2.637579         20.192356              NA         11.296974
-    ## 44    4.268482                NA        6.066242          7.359467
-    ## 45    2.689130                NA        6.932332          8.192734
-    ## 46    4.940102                NA        7.388401          6.786703
-    ## 47    3.405146                NA              NA                NA
-    ## 48    1.969944                NA        6.325943          2.715214
-    ## 49    3.689588                NA       13.923890                NA
-    ## 50    2.704340                NA        4.572483          5.551556
+    ## 41   0.6630008         2.2421531        2.420684          2.958540
+    ## 42   0.7425340         2.4428542        2.422345          3.012592
+    ## 43   0.6671156         2.1085196        2.529222          2.810956
+    ## 44   0.6925030         1.1701920        2.663332          3.061863
+    ## 45   0.6739660         1.5501478        2.358650          3.066321
+    ## 46   0.7957766         2.0018721        2.203305          2.830107
+    ## 47   0.7348118         0.3006872        2.657055          2.591020
+    ## 48   0.7618265                NA        2.417465          2.628385
+    ## 49   0.7107572                NA        2.684807          2.620868
+    ## 50   0.8848009                NA        2.496866          3.139123
     ##    SD of 4th and 4-7 SD of 4th and 8+
-    ## 41                NA         6.324702
-    ## 42          5.147846        10.723830
-    ## 43          9.262532         1.612641
-    ## 44         13.142429         4.544197
-    ## 45          4.260577               NA
-    ## 46          2.186972               NA
-    ## 47                NA               NA
-    ## 48          2.725956               NA
-    ## 49          7.411038               NA
-    ## 50                NA        22.647914
+    ## 41          3.076725         2.341651
+    ## 42          2.958642         2.388182
+    ## 43          3.134149         2.479336
+    ## 44          3.075465         1.933862
+    ## 45          2.726857         2.111081
+    ## 46          2.862452         2.582864
+    ## 47          2.811722         2.218970
+    ## 48          2.618134         2.234696
+    ## 49          2.801042         2.636598
+    ## 50          2.717556         2.370746
 
 In order to build functions individualized for each team that outlines
 their decision in certain scenarios, the equation should look something
@@ -188,20 +174,20 @@ Also lets look into teams previous history
       colnames(probmatrix) <- c("Yards to go","Percent Chance of Conversion", "Percent Chance of Field Goal","Percent Chance of Punt inside 10 yard line")
       probmatrix
     }
-    individualteamprobs("PIT")
+    individualteamprobs("TEN")
 
     ##   Yards to go Percent Chance of Conversion Percent Chance of Field Goal
-    ## 1   4th and 1                          100                    100.00000
-    ## 2 4th and 2-3                            0                    100.00000
-    ## 3 4th and 4-7                            0                     66.66667
-    ## 4  4th and 8+                            0                     90.00000
+    ## 1   4th and 1                     60.65574                     61.53846
+    ## 2 4th and 2-3                     57.89474                     68.75000
+    ## 3 4th and 4-7                     30.64516                     74.07407
+    ## 4  4th and 8+                     25.58140                     77.77778
     ##   Percent Chance of Punt inside 10 yard line
-    ## 1                                        NaN
-    ## 2                                        100
-    ## 3                                         50
-    ## 4                                         40
+    ## 1                                   76.47059
+    ## 2                                   55.35714
+    ## 3                                   66.66667
+    ## 4                                   60.08969
 
-    falcons <- allfours %>% filter(posteam=="DET")
+    falcons <- allfours %>% filter(posteam=="PHI")
       falcons$binydstogo <-  cut(falcons$ydstogo, breaks=c(0,1,3,7,50), labels=c("4th and 1","4th and 2-3","4th and 4-7","4th and 8+"))
       falconsgo <- falcons %>% filter(play_type!="field_goal") %>% filter(play_type!="punt") %>% filter(play_type!="no_play")
       falconskick <- falcons %>% filter(play_type=="field_goal")
@@ -224,25 +210,66 @@ Also lets look into teams previous history
 
     ## ── nflverse play by play data ──────────────────────────────────────────────────
 
-    ## ℹ Data updated: 2025-01-27 04:23:45 EST
+    ## ℹ Data updated: 2025-02-10 04:25:35 EST
 
-    ## # A tibble: 37 × 373
+    ## # A tibble: 1,101 × 373
     ##    play_id game_id     old_game_id home_team away_team season_type  week posteam
     ##      <dbl> <chr>       <chr>       <chr>     <chr>     <chr>       <int> <chr>  
-    ##  1     866 2024_01_LA… 2024090812  DET       LA        REG             1 DET    
-    ##  2    1683 2024_02_TB… 2024091503  DET       TB        REG             2 DET    
-    ##  3    3194 2024_02_TB… 2024091503  DET       TB        REG             2 DET    
-    ##  4    3867 2024_02_TB… 2024091503  DET       TB        REG             2 DET    
-    ##  5    4256 2024_02_TB… 2024091503  DET       TB        REG             2 DET    
-    ##  6    2757 2024_03_DE… 2024092209  ARI       DET       REG             3 DET    
-    ##  7    3110 2024_03_DE… 2024092209  ARI       DET       REG             3 DET    
-    ##  8    3393 2024_03_DE… 2024092209  ARI       DET       REG             3 DET    
-    ##  9    1071 2024_06_DE… 2024101310  DAL       DET       REG             6 DET    
-    ## 10    1598 2024_06_DE… 2024101310  DAL       DET       REG             6 DET    
-    ## # ℹ 27 more rows
+    ##  1    3042 1999_01_AR… 1999091200  PHI       ARI       REG             1 PHI    
+    ##  2    3824 1999_01_AR… 1999091200  PHI       ARI       REG             1 PHI    
+    ##  3    3998 1999_01_AR… 1999091200  PHI       ARI       REG             1 PHI    
+    ##  4     544 1999_02_TB… 1999091908  PHI       TB        REG             2 PHI    
+    ##  5    3190 1999_02_TB… 1999091908  PHI       TB        REG             2 PHI    
+    ##  6    2254 1999_03_PH… 1999092606  BUF       PHI       REG             3 PHI    
+    ##  7    3870 1999_03_PH… 1999092606  BUF       PHI       REG             3 PHI    
+    ##  8    2640 1999_04_PH… 1999100305  NYG       PHI       REG             4 PHI    
+    ##  9    3139 1999_05_DA… 1999101003  PHI       DAL       REG             5 PHI    
+    ## 10    2501 1999_06_PH… 1999101705  CHI       PHI       REG             6 PHI    
+    ## # ℹ 1,091 more rows
     ## # ℹ 365 more variables: posteam_type <chr>, defteam <chr>, side_of_field <chr>,
     ## #   yardline_100 <dbl>, game_date <chr>, quarter_seconds_remaining <dbl>,
     ## #   half_seconds_remaining <dbl>, game_seconds_remaining <dbl>,
     ## #   game_half <chr>, quarter_end <dbl>, drive <dbl>, sp <dbl>, qtr <dbl>,
-    ## #   down <dbl>, goal_to_go <int>, time <chr>, yrdln <chr>, ydstogo <dbl>,
+    ## #   down <dbl>, goal_to_go <dbl>, time <chr>, yrdln <chr>, ydstogo <dbl>,
     ## #   ydsnet <dbl>, desc <chr>, play_type <chr>, yards_gained <dbl>, …
+
+## Creation of Team’s History Variables
+
+We want to divide up team’s history in order to incorporate as many
+variables as possible to achieve a better k. - Aggressiveness
+(Attempts) - Success Rates
+
+## ACF Plot of Conversion Rates
+
+Here we are looking to see if the conversion success rates for
+individual teams are correlated with lags from previous years. We go
+back to 1999 in this data set.
+
+    new_vec <- c()
+    falcons <- allfours %>% filter(posteam=="MIN")
+    for (i in 1999:2024){
+      filtereddata1 <- falcons %>% filter(play_type=="run"|play_type=="pass") %>% filter(game_date>=i&game_date<i+1)
+      new_vec[i-1998] <- filtereddata1$success %>% mean()
+      new_vec <- na.omit(new_vec)
+    }
+    new_df <- data.frame(new_vec,lagged=lag(new_vec))
+    acf(ts(new_vec),max.lag=20)
+
+    ## Warning in plot.window(...): "max.lag" is not a graphical parameter
+
+    ## Warning in plot.xy(xy, type, ...): "max.lag" is not a graphical parameter
+
+    ## Warning in axis(side = side, at = at, labels = labels, ...): "max.lag" is not a
+    ## graphical parameter
+    ## Warning in axis(side = side, at = at, labels = labels, ...): "max.lag" is not a
+    ## graphical parameter
+
+    ## Warning in box(...): "max.lag" is not a graphical parameter
+
+    ## Warning in title(...): "max.lag" is not a graphical parameter
+
+![](kickerandpunters_files/figure-markdown_strict/unnamed-chunk-8-1.png)
+
+After looking at a lot of different teams, there have been no real
+significant autocorrelations in the lag plot for the mean conversion
+rates over the past year.

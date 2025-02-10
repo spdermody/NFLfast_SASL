@@ -13,7 +13,7 @@ library(dplyr)
 
 ```{r}
 library(nflfastR)
-data <- load_pbp(2024)
+data <- load_pbp(1999:2024)
 dim(data)
 head(data)
 ```
@@ -34,41 +34,33 @@ abline(v=mean(punts$wpa),col="red",pch=8)
 ```
 ```{r}
 punt41 <- punts %>% filter(yardline_100==41)
-dens <- density(punt41$wpa)
+dens <- density(punt41$epa)
 plot(dens$x,dens$y,xlab="Expected Points Added",ylab="Density",main="Density of EPA on Punts")
 abline(v=mean(punt41$wpa),col="red",pch=8)
 msdpunt <- function(yard_line){
   new_df <- punts %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
 msdkick <- function(yard_line){
   new_df <- kicks %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
 msdgoforit1 <- function(yard_line){
   new_df <- goforit %>% filter(ydstogo==1) %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
 msdgoforit23 <- function(yard_line){
   new_df <- goforit %>% filter(ydstogo==2|ydstogo==3) %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
 msdgoforit47 <- function(yard_line){
   new_df <- goforit %>% filter(ydstogo>=4&ydstogo<=7) %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
 msdgoforit8 <- function(yard_line){
   new_df <- goforit %>% filter(ydstogo>=8) %>% filter(yardline_100==yard_line)
-  c(mean(new_df$wpa),sd(new_df$wpa))*100
+  c(mean(new_df$epa),sd(new_df$epa))
 }
-fourthand1 <- c()
-nums <- 41:50
-nums
-for (i in nums){
-  fourthand1[i] <- msdgoforit1(i)[1]
-  fourthand1
-}
-fourthand1[nums]
 ```
 ```{r}
 kick_epa_mean <- c()
@@ -132,11 +124,11 @@ individualteamprobs <- function(team){
   colnames(probmatrix) <- c("Yards to go","Percent Chance of Conversion", "Percent Chance of Field Goal","Percent Chance of Punt inside 10 yard line")
   probmatrix
 }
-individualteamprobs("PIT")
+individualteamprobs("TEN")
 ```
 
 ```{r}
-falcons <- allfours %>% filter(posteam=="DET")
+falcons <- allfours %>% filter(posteam=="PHI")
   falcons$binydstogo <-  cut(falcons$ydstogo, breaks=c(0,1,3,7,50), labels=c("4th and 1","4th and 2-3","4th and 4-7","4th and 8+"))
   falconsgo <- falcons %>% filter(play_type!="field_goal") %>% filter(play_type!="punt") %>% filter(play_type!="no_play")
   falconskick <- falcons %>% filter(play_type=="field_goal")
@@ -157,5 +149,26 @@ falcons <- allfours %>% filter(posteam=="DET")
   colnames(probmatrix) <- c("Yards to go","Percent Chance of Conversion", "Percent Chance of Field Goal","Percent Chance of Punt inside 10 yard line")
 falcons
 ```
+## Creation of Team's History Variables
 
+We want to divide up team's history in order to incorporate as many variables as possible to achieve a better k.
+- Aggressiveness (Attempts)
+- Success Rates
 
+## ACF Plot of Conversion Rates
+
+Here we are looking to see if the conversion success rates for individual teams are correlated with lags from previous years. We go back to 1999 in this data set.
+
+```{r}
+new_vec <- c()
+falcons <- allfours %>% filter(posteam=="MIN")
+for (i in 1999:2024){
+  filtereddata1 <- falcons %>% filter(play_type=="run"|play_type=="pass") %>% filter(game_date>=i&game_date<i+1)
+  new_vec[i-1998] <- filtereddata1$success %>% mean()
+  new_vec <- na.omit(new_vec)
+}
+new_df <- data.frame(new_vec,lagged=lag(new_vec))
+acf(ts(new_vec),max.lag=20)
+```
+
+After looking at a lot of different teams, there have been no real significant autocorrelations in the lag plot for the mean conversion rates over the past year.
