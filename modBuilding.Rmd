@@ -1,0 +1,51 @@
+---
+title: "modBuilding"
+output: pdf_document
+date: "2025-02-10"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(dplyr)
+library(nflfastR)
+library(tidyverse)
+data <- load_pbp(2013:2023)
+```
+
+
+
+Putting all wanted variables into a data frame
+
+```{r}
+
+allfours <- data %>% filter(down==4,yardline_100<=50,yardline_100>20, na.rm = TRUE)
+
+play_id <- allfours[, "play_id"]
+success <- ifelse(allfours$ydstogo <= allfours$yards_gained, 1, 0)
+ydsToGo <- allfours[, "ydstogo"]
+timeRem <- allfours[, "half_seconds_remaining"]
+pointDif <- allfours[, "score_differential"]
+
+modData <- data.frame(play_id, success, ydsToGo, timeRem, pointDif)
+
+```
+
+
+MLR for each variable on success
+
+```{r}
+
+success <- as.factor(success)
+
+logMod <- glm(success~.-play_id, data = modData, family = binomial())
+summary(logMod)
+
+
+exp(coefficients(logMod))
+
+```
+
