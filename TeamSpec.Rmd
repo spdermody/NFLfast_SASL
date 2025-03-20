@@ -1,0 +1,194 @@
+---
+title: "TeamSpecificRankings"
+output: pdf_document
+date: "2025-03-20"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(nflfastR)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+
+pbp <- load_pbp(2019:2023) %>%
+  arrange(game_id, play_id)
+```
+
+```{r}
+#### PUNT WITHIN 10 DATA #####
+
+offensive_plays <- c("run", "pass", "qb_spike", "qb_kneel")
+
+punts <- pbp %>%
+  filter(play_type == "punt") %>%
+  select(game_id, play_id, posteam, yardline_100, season)
+
+offensive_next_plays <- pbp %>%
+  filter(play_type %in% offensive_plays) %>%
+  select(game_id, play_id, posteam, yardline_100)
+
+joined <- punts %>%
+  left_join(offensive_next_plays, by = "game_id", suffix = c("_punt", "_next")) %>%
+  filter(play_id_next > play_id_punt, posteam_next != posteam_punt) %>%
+  group_by(game_id, play_id_punt) %>%
+  slice_min(play_id_next) %>%
+  ungroup()
+
+total_punts <- nrow(joined)
+inside_10_count <- sum(joined$yardline_100_next >= 90, na.rm = TRUE)
+
+joined <- joined %>%
+  mutate(FieldPositionGroup = cut(
+    yardline_100_punt,
+    breaks = seq(30, 80),
+    include.lowest = TRUE
+  )) %>%
+  filter(!is.na(FieldPositionGroup))
+
+team_season_punt_stats <- joined %>%
+  group_by(season, posteam_punt) %>%
+  summarize(
+    total_punts      = n(),
+    inside_10_count  = sum(yardline_100_next >= 90, na.rm = TRUE),
+    inside_10_pct    = round(100 * inside_10_count / total_punts, 1)
+  ) %>%
+  arrange(season, desc(-inside_10_pct))
+
+print(team_season_punt_stats)
+
+```
+
+```{r}
+########### AGGRESSION ############
+
+fourth_down_plays <- pbp %>%
+  filter(
+    down == 4,
+    ydstogo <= 5,
+    penalty == 0,
+    !is.na(epa),  
+    !is.na(play_type),
+    !play_type %in% c("no_play", "qb_kneel", "qb_spike")  
+  )
+
+fourth_down_plays <- fourth_down_plays %>%
+  mutate(go_for_it = as.integer(play_type %in% c("run", "pass")))
+
+coach_aggressiveness <- fourth_down_plays %>%
+  group_by(posteam, season) %>%
+  summarise(
+    total_4th_downs = n(),
+    go_for_it_attempts = sum(go_for_it),
+    coach_aggressiveness = mean(go_for_it)
+  ) %>%
+  arrange(season, desc(-coach_aggressiveness))
+
+print(coach_aggressiveness)
+
+```
+
+```{r}
+######## FIELD GOAL PCT ######### (Excluding attempts within the 20 yardline)
+
+
+field_goals <- pbp %>%
+  filter(play_type == "field_goal", yardline_100 > 20)
+
+
+team_fg_by_season <- field_goals %>%
+  group_by(posteam, season) %>%
+  summarize(
+    total_fg_att  = n(),
+    total_fg_made = sum(field_goal_result == "made", na.rm = TRUE),
+    fg_percentage = round(total_fg_made / total_fg_att * 100, 1)
+  ) %>%
+  arrange(season, desc(-fg_percentage))
+
+print(team_fg_by_season)
+
+```
+
+```{r}
+
+######## OFFENSIVE YARDAGE #########
+
+yardage <- pbp %>%
+  filter(
+    !is.na(yards_gained),
+    !is.na(result),
+    play_type %in% c("run", "pass"))
+
+total_yardage_by_team_season <- yardage %>%
+  group_by(season, posteam) %>%
+  summarise(
+    total_yardage = sum(yards_gained)
+  ) %>%
+  ungroup()%>%
+  arrange(season, -total_yardage)
+
+print(total_yardage_by_team_season, n = 32)
+
+```
+
+```{r}
+
+##### TEAM RANKING AND STATS FOR EACH CATEGORY EACH SEASON ######
+
+
+team_season_punt_stats <- team_season_punt_stats %>%
+  group_by(season) %>%
+  mutate(inside_10_pct_rank = dense_rank(desc(inside_10_pct))) %>%
+  ungroup()
+
+coach_aggressiveness <- coach_aggressiveness %>%
+  group_by(season) %>%
+  mutate(coach_aggressiveness_rank = dense_rank(desc(coach_aggressiveness))) %>%
+  ungroup()
+
+team_fg_by_season <- team_fg_by_season %>%
+  group_by(season) %>%
+  mutate(fg_percentage_rank = dense_rank(desc(fg_percentage))) %>%
+  ungroup()
+
+total_yardage_by_team_season <- total_yardage_by_team_season %>%
+  group_by(season) %>%
+  mutate(total_yardage_rank = dense_rank(desc(total_yardage))) %>%
+  ungroup()
+
+team_season_punt_stats <- team_season_punt_stats %>%
+  rename(posteam = posteam_punt)
+
+final_stats <- team_season_punt_stats %>%
+  left_join(coach_aggressiveness,      by = c("season", "posteam")) %>%
+  left_join(team_fg_by_season,        by = c("season", "posteam")) %>%
+  left_join(total_yardage_by_team_season, by = c("season", "posteam"))
+
+print(final_stats, n = 32)
+
+
+
+###### JUST TEAM RANKINGS #######
+
+final_stats_rank <- team_season_punt_stats %>%
+  left_join(coach_aggressiveness, by = c("season", "posteam")) %>%
+  left_join(team_fg_by_season,    by = c("season", "posteam")) %>%
+  left_join(total_yardage_by_team_season, by = c("season", "posteam")) %>%
+  select(
+    season,
+    posteam,
+    inside_10_pct_rank,
+    coach_aggressiveness_rank,
+    fg_percentage_rank,
+    total_yardage_rank
+  )
+
+print(final_stats_rank, n = 150)
+
+
+```
+
+
