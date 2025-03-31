@@ -1,0 +1,363 @@
+---
+title: "xgboostsetup"
+output: pdf_document
+date: "2025-02-17"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(tidyverse)
+```
+
+
+```{r}
+library(nflfastR)
+data <- load_pbp(2019:2024)
+#data$play_type
+```
+
+
+## FILTER DATA
+
+
+```{r}
+pbp <- data %>% filter(down==4,play_type!="no_play",play_type!="qb_kneel") %>%
+  mutate(
+    # Assign play types based on success & EPA:
+    play_type_new = case_when(
+      play_type == "run" | play_type == "pass" ~ "go_for_it",  # Converted on 4th down or made FG
+      play_type == "punt" ~ "punt",       # Failed conversion or bad punt
+      play_type == "field_goal" ~ "field_goal", # Rough estimate for FG makes
+      TRUE ~ NA_character_
+    ))
+real_props <- pbp$play_type_new %>% table() %>% proportions()
+real_props
+```
+
+Overall teams from 2019-2024 go for it about 19% of the time, Punt 56% and Attempt a Field Goal 25% on all 4th downs.
+```{r}
+#### PUNT WITHIN 10 DATA #####
+
+offensive_plays <- c("run", "pass", "qb_spike", "qb_kneel")
+
+punts <- pbp %>%
+  filter(play_type == "punt") %>%
+  select(game_id, play_id, posteam, yardline_100, season)
+
+offensive_next_plays <- pbp %>%
+  filter(play_type %in% offensive_plays) %>%
+  select(game_id, play_id, posteam, yardline_100)
+
+joined <- punts %>%
+  left_join(offensive_next_plays, by = "game_id", suffix = c("_punt", "_next")) %>%
+  filter(play_id_next > play_id_punt, posteam_next != posteam_punt) %>%
+  group_by(game_id, play_id_punt) %>%
+  slice_min(play_id_next) %>%
+  ungroup()
+
+total_punts <- nrow(joined)
+inside_10_count <- sum(joined$yardline_100_next >= 90, na.rm = TRUE)
+
+joined <- joined %>%
+  mutate(FieldPositionGroup = cut(
+    yardline_100_punt,
+    breaks = seq(30, 80),
+    include.lowest = TRUE
+  )) %>%
+  filter(!is.na(FieldPositionGroup))
+
+team_season_punt_stats <- joined %>%
+  group_by(season, posteam_punt) %>%
+  summarize(
+    total_punts      = n(),
+    inside_10_count  = sum(yardline_100_next >= 90, na.rm = TRUE),
+    inside_10_pct    = round(100 * inside_10_count / total_punts, 1)
+  ) %>%
+  arrange(season, desc(-inside_10_pct))
+
+print(team_season_punt_stats)
+
+```
+
+```{r}
+########### AGGRESSION ############
+
+fourth_down_plays <- pbp %>%
+  filter(
+    down == 4,
+    ydstogo <= 5,
+    penalty == 0,
+    !is.na(epa),  
+    !is.na(play_type),
+    !play_type %in% c("no_play", "qb_kneel", "qb_spike")  
+  )
+
+fourth_down_plays <- fourth_down_plays %>%
+  mutate(go_for_it = as.integer(play_type %in% c("run", "pass")))
+
+coach_aggressiveness <- fourth_down_plays %>%
+  group_by(posteam, season) %>%
+  summarise(
+    total_4th_downs = n(),
+    go_for_it_attempts = sum(go_for_it),
+    coach_aggressiveness = mean(go_for_it)
+  ) %>%
+  arrange(season, desc(-coach_aggressiveness))
+
+print(coach_aggressiveness)
+
+```
+
+```{r}
+######## FIELD GOAL PCT ######### (Excluding attempts within the 20 yardline)
+
+
+field_goals <- pbp %>%
+  filter(play_type == "field_goal", yardline_100 > 20)
+
+
+team_fg_by_season <- field_goals %>%
+  group_by(posteam, season) %>%
+  summarize(
+    total_fg_att  = n(),
+    total_fg_made = sum(field_goal_result == "made", na.rm = TRUE),
+    fg_percentage = round(total_fg_made / total_fg_att * 100, 1)
+  ) %>%
+  arrange(season, desc(-fg_percentage))
+
+print(team_fg_by_season)
+
+```
+
+```{r}
+
+######## OFFENSIVE YARDAGE #########
+
+yardage <- pbp %>%
+  filter(
+    !is.na(yards_gained),
+    !is.na(result),
+    play_type %in% c("run", "pass"))
+
+total_yardage_by_team_season <- yardage %>%
+  group_by(season, posteam) %>%
+  summarise(
+    total_yardage = sum(yards_gained)
+  ) %>%
+  ungroup()%>%
+  arrange(season, -total_yardage)
+
+print(total_yardage_by_team_season, n = 32)
+
+```
+
+```{r}
+
+##### TEAM RANKING AND STATS FOR EACH CATEGORY EACH SEASON ######
+
+
+team_season_punt_stats <- team_season_punt_stats %>%
+  group_by(season) %>%
+  mutate(inside_10_pct_rank = dense_rank(desc(inside_10_pct))) %>%
+  ungroup()
+
+coach_aggressiveness <- coach_aggressiveness %>%
+  group_by(season) %>%
+  mutate(coach_aggressiveness_rank = dense_rank(desc(coach_aggressiveness))) %>%
+  ungroup()
+
+team_fg_by_season <- team_fg_by_season %>%
+  group_by(season) %>%
+  mutate(fg_percentage_rank = dense_rank(desc(fg_percentage))) %>%
+  ungroup()
+
+total_yardage_by_team_season <- total_yardage_by_team_season %>%
+  group_by(season) %>%
+  mutate(total_yardage_rank = dense_rank(desc(total_yardage))) %>%
+  ungroup()
+
+team_season_punt_stats <- team_season_punt_stats %>%
+  rename(posteam = posteam_punt)
+
+final_stats <- team_season_punt_stats %>%
+  left_join(coach_aggressiveness,      by = c("season", "posteam")) %>%
+  left_join(team_fg_by_season,        by = c("season", "posteam")) %>%
+  left_join(total_yardage_by_team_season, by = c("season", "posteam"))
+
+print(final_stats, n = 32)
+
+
+
+###### JUST TEAM RANKINGS #######
+
+final_stats_rank <- team_season_punt_stats %>%
+  left_join(coach_aggressiveness, by = c("season", "posteam")) %>%
+  left_join(team_fg_by_season,    by = c("season", "posteam")) %>%
+  left_join(total_yardage_by_team_season, by = c("season", "posteam")) %>%
+  select(
+    season,
+    posteam,
+    inside_10_pct_rank,
+    coach_aggressiveness_rank,
+    fg_percentage_rank,
+    total_yardage_rank
+  )
+
+print(final_stats_rank, n = 150)
+
+#names(team_season_punt_stats)
+pbp <- pbp %>% left_join(final_stats_rank, by = c("season", "posteam"))
+#pbp %>% select(posteam,inside_10_pct_rank, coach_aggressiveness_rank, fg_percentage_rank, total_yardage_rank)
+```
+
+
+```{r}
+pbp <- pbp %>%
+  mutate(
+    across(c(inside_10_pct_rank, coach_aggressiveness_rank, fg_percentage_rank, total_yardage_rank), as.numeric)
+  )
+```
+
+## Create Expected EPA columns
+
+```{r}
+##### Group by the Play type and yardline on the field to average epa so that we can group similar plays together #####
+pbp <- pbp %>%
+  mutate(
+    yardline_bin = cut(yardline_100, 
+                       breaks = seq(0, 100, by = 10), 
+                       labels = seq(10, 100, by = 10), 
+                       include.lowest = TRUE)
+  ) %>%
+  group_by(play_type, yardline_bin) %>%
+  mutate(
+    expected_epa = mean(epa, na.rm = TRUE) # Average EPA for similar plays in each yardline bin
+  ) %>%
+  ungroup() %>%
+  mutate(
+    punt_expected_epa = ifelse(play_type_new == "punt", expected_epa, NA),
+    field_goal_expected_epa = ifelse(play_type_new == "field_goal", expected_epa, NA),
+    go_for_it_expected_epa = ifelse(play_type_new == "go_for_it", expected_epa, NA)
+  )
+pbp$yardline_bin %>% table() %>% proportions()
+```
+
+The number of 4th down plays we have is scattered more evenly than I thought across all the different yardlines. But, the most are between 40 and 80 yards to go (Accounting for nearly 55% of the total 4th downs)
+
+
+```{r}
+pbp <- pbp %>%
+  group_by(yardline_100) %>%
+  mutate(
+    punt_expected_epa = ifelse(is.na(punt_expected_epa), mean(punt_expected_epa, na.rm = TRUE), punt_expected_epa),
+    field_goal_expected_epa = ifelse(is.na(field_goal_expected_epa), mean(field_goal_expected_epa, na.rm = TRUE), field_goal_expected_epa),
+    go_for_it_expected_epa = ifelse(is.na(go_for_it_expected_epa), mean(go_for_it_expected_epa, na.rm = TRUE), go_for_it_expected_epa)
+  ) %>%
+  ungroup()
+pbp$go_for_it_expected_epa <- ifelse(is.na(pbp$go_for_it_expected_epa), mean(pbp$go_for_it_expected_epa, na.rm = TRUE), pbp$go_for_it_expected_epa)
+pbp$field_goal_expected_epa[is.na(pbp$field_goal_expected_epa)] = -10
+for (i in 1:length(pbp$play_id)){
+  pbp$punt_expected_epa[i] <- ifelse(is.na(pbp$punt_expected_epa[i]), mean(pbp$punt_expected_epa, na.rm = TRUE), no = pbp$punt_expected_epa[i])
+}
+pbp_long <- pbp %>%
+  pivot_longer(cols=c("punt_expected_epa","field_goal_expected_epa","go_for_it_expected_epa"), names_to = "Play", values_to = "EPA")
+ggplot(pbp_long,aes(x=EPA,fill=Play)) + geom_density(alpha=0.4,color="black") + xlim(-1,1) + labs(title="EPA density plot of each play type")
+```
+
+```{r}
+# Create Best Decision
+pbp <- pbp %>%
+  mutate(
+    best_decision = case_when(
+      go_for_it_expected_epa == pmax(field_goal_expected_epa, punt_expected_epa,go_for_it_expected_epa) ~ "go_for_it",
+      field_goal_expected_epa == pmax(go_for_it_expected_epa, punt_expected_epa, field_goal_expected_epa) ~ "field_goal",
+      punt_expected_epa == pmax(go_for_it_expected_epa, field_goal_expected_epa, punt_expected_epa) ~ "punt"
+    ) %>%
+    as.factor()
+  )
+epa_props <- pbp$best_decision %>% table() %>% proportions()
+epa_props
+```
+Here we have our best_decision coming from 0.42 for go_for_it and 0.321 for field_goal only 26% of time punting.
+
+
+
+```{r}
+library(xgboost)
+library(caret)
+
+# Create Machine Learning Model
+features <- pbp[,c("score_differential_post","yardline_100","wp","ydstogo","inside_10_pct_rank", "coach_aggressiveness_rank", "fg_percentage_rank", "total_yardage_rank")]
+
+# Convert to matrix for XGBoost
+X <- as.matrix(features)
+y <- as.factor(pbp$best_decision)
+
+# Split data (80% train, 20% test)
+set.seed(1234)
+train_idx <- sample(length(pbp)*0.8,replace=FALSE)
+X_train <- X[train_idx, ]
+y_train <- y[train_idx]
+X_test <- X[-train_idx, ]
+y_test <- y[-train_idx]
+as.numeric(y_train) - 1 %>% table() %>% proportions()
+# Train XGBoost model
+xgb_model <- xgboost(
+  data = X_train, label = as.numeric(y_train) - 1, # Convert to numeric
+  nrounds = 100, objective = "multi:softprob",
+  num_class = 3, eval_metric = "mlogloss"
+)
+#Step 5: Define Dynamic 
+#k dynamically by comparing predicted decision confidence:
+# Get model predictions
+pred_probs <- predict(xgb_model, X_test)
+pred_probs <- matrix(pred_probs, ncol = 3, byrow = TRUE)
+# Assign k based on decision confidence
+k_values <- apply(pred_probs, 1, function(probs) {
+  confidence <- max(probs) # Confidence of best choice
+  return( (1 - confidence) * 10 ) # Higher confidence -> lower k
+})
+summary(k_values)
+pbp$k_dynamic <- NA
+pbp$k_dynamic[-train_idx] <- k_values
+#pbp %>% filter(k_dynamic > 0.8)
+```
+We train the xg boost model with our features in the X and y is our best decision variable. But for xgboost to work we create a numerical value system for best decision where,
+- field_goal = 0
+- go_for_it = 1
+- punt = 2
+
+```{r}
+epa_fg <- pbp %>% filter(field_goal_attempt == 1)
+epa_fg <- epa_fg$field_goal_expected_epa
+epa_punt <- pbp$punt_expected_epa
+epa_go <- pbp$go_for_it_expected_epa
+only_fg_epa <- pbp$field_goal_expected_epa[pbp$field_goal_expected_epa != -10]
+pbp <- pbp %>% 
+  mutate(only_fg_expected_epa = (field_goal_expected_epa[field_goal_expected_epa == -10] = NA)) %>%
+  mutate(
+    go_for_it_adjusted_epa = go_for_it_expected_epa - k_dynamic * sd(go_for_it_expected_epa),
+    field_goal_adjusted_epa = field_goal_expected_epa - k_dynamic * sd(only_fg_epa),
+    punt_adjusted_epa = punt_expected_epa - k_dynamic * sd(punt_expected_epa),
+    final_decision = case_when(
+      go_for_it_adjusted_epa > pmax(field_goal_adjusted_epa, punt_adjusted_epa) ~ "go_for_it",
+      field_goal_adjusted_epa > pmax(go_for_it_adjusted_epa, punt_adjusted_epa) ~ "field_goal",
+      punt_adjusted_epa > pmax(go_for_it_adjusted_epa, field_goal_adjusted_epa) ~ "punt"
+    )
+)
+vec <- c(sd(pbp$punt_expected_epa),
+sd(only_fg_epa),
+sd(pbp$go_for_it_expected_epa))
+final_props <- pbp$final_decision %>% table() %>% proportions()
+sd_df <- data.frame(Plays=c("Punt SD","FG SD","Go For It SD"),Standard_Deviations = vec)
+sd_df
+decision_props_df <- data.frame(Play = c("Field Goal","Go For It","Punt"),Coach_decision = as.numeric(real_props),EPA_decision = as.numeric(epa_props), XGBoost_decision = as.numeric(final_props))
+decision_props_df
+```
+Here we can see that XG Boost and EPA both favor field goals more than they are used in reality. Also XG Boost tends to split the difference on going for it and punts.
+
+Our XGBoost model claims that teams should be going for it on 4th down about 16.2% more often than they have from 2019 to 2024. Also it claims there should be a reduction in the number of punts, actually decreasing punts by a shocking 26.2%.

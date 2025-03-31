@@ -159,8 +159,8 @@ total_yardage_by_team_season <- total_yardage_by_team_season %>%
   mutate(total_yardage_rank = dense_rank(desc(total_yardage))) %>%
   ungroup()
 
-team_season_punt_stats <- team_season_punt_stats %>%
-  rename(posteam = posteam_punt)
+#team_season_punt_stats <- team_season_punt_stats %>%
+ # rename(posteam = posteam_punt)
 
 final_stats <- team_season_punt_stats %>%
   left_join(coach_aggressiveness,      by = c("season", "posteam")) %>%
@@ -188,7 +188,7 @@ final_stats_rank <- team_season_punt_stats %>%
 
 print(final_stats_rank, n = 150)
 
-
+names(team_season_punt_stats)
 ```
 
 
